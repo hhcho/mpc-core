@@ -62,7 +62,7 @@ const LElem128UniqueID uint8 = 4
 
 var LElem128ModBitLen int = bits.Len64(LElem128Mod.Hi) + 64
 var LElem128ModBig *big.Int = big.NewInt(0).Sub(big.NewInt(0).Exp(big.NewInt(2), big.NewInt(127), nil), big.NewInt(1))
-
+var LElem128ModHalfBig *big.Int = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(126), nil)
 // Large ring with power of two modulus
 type LElem2N uint64
 
@@ -111,7 +111,9 @@ var SElemCModBitLen int = bits.Len64(uint64(SElemCMod))
 var SElemCModBig *big.Int = big.NewInt(0).SetUint64(uint64(SElemCMod))
 
 func (a LElem128) ToBigInt() *big.Int {
-	return big.NewInt(0).Add(big.NewInt(0).Lsh(big.NewInt(0).SetUint64(a.Hi), 64), big.NewInt(0).SetUint64(a.Lo))
+	r := new(big.Int)
+	new(big.Int).QuoRem(new(big.Int).Add(new(big.Int).Lsh(new(big.Int).SetUint64(a.Hi), 64), new(big.Int).SetUint64(a.Lo)), LElem128ModBig, r)
+	return r
 }
 
 func (a LElem128) FromBigInt(n *big.Int) RElem {
@@ -122,6 +124,20 @@ func (a LElem128) FromBigInt(n *big.Int) RElem {
 
 func (a LElem128) ToBigFloat(fracBits int) *big.Float {
 	out := new(big.Float).SetInt(a.ToBigInt())
+	out.Mul(out, new(big.Float).SetMantExp(big.NewFloat(1), -fracBits))
+	return out
+}
+
+func (a LElem128) ToSignedBigInt() *big.Int {
+	tmp := a.ToBigInt()
+	half := new(big.Int).Rsh(LElem128ModBig, 1)
+	if tmp.Cmp(half) >= 0 {
+		tmp.Sub(tmp, LElem128ModBig)
+	}
+	return tmp
+}
+func (a LElem128) ToSignedBigFloat(fracBits int) *big.Float {
+	out := new(big.Float).SetInt(a.ToSignedBigInt())
 	out.Mul(out, new(big.Float).SetMantExp(big.NewFloat(1), -fracBits))
 	return out
 }
