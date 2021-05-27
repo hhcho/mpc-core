@@ -63,6 +63,7 @@ const LElem128UniqueID uint8 = 4
 var LElem128ModBitLen int = bits.Len64(LElem128Mod.Hi) + 64
 var LElem128ModBig *big.Int = big.NewInt(0).Sub(big.NewInt(0).Exp(big.NewInt(2), big.NewInt(127), nil), big.NewInt(1))
 var LElem128ModHalfBig *big.Int = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(126), nil)
+
 // Large ring with power of two modulus
 type LElem2N uint64
 
@@ -141,7 +142,9 @@ func (a LElem128) ToSignedBigFloat(fracBits int) *big.Float {
 	out.Mul(out, new(big.Float).SetMantExp(big.NewFloat(1), -fracBits))
 	return out
 }
+
 var halfFloat = big.NewFloat(0.5)
+
 func roundFloat(a *big.Float) *big.Int {
 	var i *big.Int
 	if a.Signbit() {
@@ -155,7 +158,6 @@ func (a LElem128) FromBigFloat(n *big.Float, fracBits int) RElem {
 	f := new(big.Float).Mul(n, new(big.Float).SetMantExp(big.NewFloat(1), fracBits))
 	return a.FromBigInt(roundFloat(f))
 }
-
 
 // From: https://github.com/lukechampine/uint128/blob/master/uint128.go
 // QuoRem returns q = u/v and r = u%v.
@@ -719,19 +721,19 @@ func (a SElemDS) One() RElem {
 	return SElemDS(1)
 }
 func (a LElem128) Modulus() *big.Int {
-	return LElem128ModBig
+	return new(big.Int).Set(LElem128ModBig)
 }
 func (a LElem2N) Modulus() *big.Int {
-	return LElem2NModBig
+	return new(big.Int).Set(LElem2NModBig)
 }
 func (a LElemP) Modulus() *big.Int {
-	return LElemPModBig
+	return new(big.Int).Set(LElemPModBig)
 }
 func (a SElemC) Modulus() *big.Int {
-	return SElemCModBig
+	return new(big.Int).Set(SElemCModBig)
 }
 func (a SElemDS) Modulus() *big.Int {
-	return SElemDSModBig
+	return new(big.Int).Set(SElemDSModBig)
 }
 func (a LElem2N) NumBytes() uint32 {
 	return LElem2NBytes
@@ -1356,4 +1358,25 @@ func IntToRMat(rtype RElem, a [][]int) RMat {
 		}
 	}
 	return out
+}
+
+func (a RVec) ToInt() []int {
+	res := make([]int, len(a))
+	for i := range res {
+		res[i] = int(a[i].Uint64())
+	}
+
+	return res
+}
+
+func (a RMat) ToInt() [][]int {
+	out := make([][]int, len(a))
+	for i := range out {
+		out[i] = make([]int, len(a[i]))
+		for j := range out[i] {
+			out[i][j] = int(a[i][j].Uint64())
+		}
+	}
+	return out
+
 }
