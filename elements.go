@@ -324,6 +324,40 @@ func div128(Hi, Lo, y Uint128) (quo, rem Uint128) {
 	//return q1*two32 + q0, (un21*two32 + un0 - q0*y) >> s
 }
 
+var LElem128MFormNInv = LElem128Zero.FromBigInt(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128),new(big.Int).ModInverse(LElem128ModBig, new(big.Int).Lsh(big.NewInt(1), 128))))
+var LElem128MFormR2 = LElem128Zero.FromBigInt(new(big.Int).Mod(new(big.Int).Lsh(big.NewInt(1), 2*128), LElem128ModBig))
+
+// REDC algorithm for modular arithmetic in Montgomery form
+func (a LElem128) REDC(hi, lo Uint128) RElem {
+	_, m := mul128(lo, Uint128(LElem128MFormNInv.(LElem128)))
+	mNHi, mNLo := mul128(m, Uint128(LElem128Mod))
+	_, carry := add128(mNLo, lo)
+	t, carry1 := add128(mNHi, hi)
+	t, carry2 := add128(t, Uint128{0, carry})
+
+	if carry1 + carry2 > 0 || !lessThan128(t, Uint128(LElem128Mod)) {
+		res, _ := sub128(t, Uint128(LElem128Mod))
+		return LElem128(res)
+	} else {
+		return LElem128(t)
+	}
+}
+
+func (a LElem128) MulMForm(b interface{}) RElem {
+	THi, TLo := mul128(Uint128(a), Uint128(b.(LElem128)))
+	return a.REDC(THi, TLo)
+}
+
+func (a LElem128) ExitMForm() RElem {
+	return a.REDC(Uint128{0,0}, Uint128(a))
+}
+
+func (a LElem128) MForm() RElem {
+	// Multiply by R^2 mod N
+	Hi, Lo := mul128(Uint128(a), Uint128(LElem128MFormR2.(LElem128)))
+	return a.REDC(Hi, Lo)
+}
+
 func (a LElem128) Mul(b interface{}) RElem {
 	Hi, Lo := mul128(Uint128(a), Uint128(b.(LElem128)))
 
