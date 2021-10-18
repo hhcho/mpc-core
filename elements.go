@@ -22,6 +22,7 @@ type RElem interface {
 	Uint64() uint64
 	Float64(int) float64
 	FromInt(int) RElem
+	FromBigInt(*big.Int) RElem
 	FromUint64(uint64) RElem
 	FromFloat64(float64, int) RElem
 	FromBytes([]byte) RElem
@@ -34,10 +35,21 @@ type RElem interface {
 	ModBitLength() int
 	GetBit(int) int
 	Trunc(int) RElem
+	Copy() RElem
 }
 
 type RVec []RElem
 type RMat []RVec
+
+type LElem256 struct {
+	Val *big.Int
+}
+const LElem256Bytes uint32 = 32 // Extra byte for sign bit for ease of marshalling
+var LElem256Zero LElem256 = LElem256{big.NewInt(0)}
+var LElem256Mod = LElem256{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 256), big.NewInt(189))} // 2^256 - 189
+var LElem256ModHalf = LElem256{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 255), big.NewInt(94))} // 2^255 - 94
+var LElem256ModBitLen int = (LElem256Mod).Val.BitLen()
+const LElem256UniqueID uint8 = 5
 
 type Uint128 struct {
 	Hi, Lo uint64
@@ -110,6 +122,70 @@ const SElemCUniqueID uint8 = 3
 
 var SElemCModBitLen int = bits.Len64(uint64(SElemCMod))
 var SElemCModBig *big.Int = big.NewInt(0).SetUint64(uint64(SElemCMod))
+
+/* LElem256 */
+
+func (a LElem256) Mul(b interface{}) RElem {
+	m := new(big.Int).Mul(a.Val, b.(LElem256).Val)
+	return LElem256{new(big.Int).Mod(m, LElem256Mod.Val)}
+}
+
+func (a LElem256) Add(b interface{}) RElem {
+	m := new(big.Int).Add(a.Val, b.(LElem256).Val)
+	return LElem256{new(big.Int).Mod(m, LElem256Mod.Val)}
+}
+
+func (a LElem256) Sub(b interface{}) RElem {
+	return a.Add(b.(LElem256).Neg())
+}
+
+func (a LElem256) Neg() RElem {
+	m := new(big.Int).Neg(a.Val)
+	return LElem256{new(big.Int).Mod(m, LElem256Mod.Val)}
+}
+
+func (a LElem256) Inv() RElem {
+	bInv := big.NewInt(0).ModInverse(a.Val, LElem256Mod.Val)
+	if bInv == nil {
+		panic("ModInverse does not exist")
+	}
+	return LElem256{bInv}
+}
+
+func (a LElem256) ToBigInt() *big.Int {
+	return new(big.Int).Set(a.Val)
+}
+
+func (a LElem256) FromBigInt(n *big.Int) RElem {
+	//return LElem256{new(big.Int).Mod(new(big.Int).Set(n), LElem256Mod.Val)}
+	return LElem256{new(big.Int).Set(n)}
+}
+
+func (a LElem256) ToBigFloat(fracBits int) *big.Float {
+	out := new(big.Float).SetInt(a.Val)
+	out.Mul(out, new(big.Float).SetMantExp(big.NewFloat(1), -fracBits))
+	return out
+}
+
+func (a LElem256) ToSignedBigInt() *big.Int {
+	if a.Val.Cmp(LElem256ModHalf.Val) >= 0 {
+		return new(big.Int).Sub(a.Val, LElem256Mod.Val)
+	}
+	return new(big.Int).Set(a.Val)
+}
+
+func (a LElem256) ToSignedBigFloat(fracBits int) *big.Float {
+	out := new(big.Float).SetInt(a.ToSignedBigInt())
+	out.Mul(out, new(big.Float).SetMantExp(big.NewFloat(1), -fracBits))
+	return out
+}
+
+func (a LElem256) FromBigFloat(n *big.Float, fracBits int) RElem {
+	f := new(big.Float).Mul(n, new(big.Float).SetMantExp(big.NewFloat(1), fracBits))
+	return a.FromBigInt(roundFloat(f))
+}
+
+/* LElem128 */
 
 func (a LElem128) ToBigInt() *big.Int {
 	r := new(big.Int)
@@ -524,6 +600,9 @@ func (a SElemC) Inv() RElem {
 	}
 	return SElemC(bInv.Uint64())
 }
+func (a LElem256) AssertTypeFor(n RElem) RElem {
+	return n.(LElem256)
+}
 func (a LElem128) AssertTypeFor(n RElem) RElem {
 	return n.(LElem128)
 }
@@ -538,6 +617,12 @@ func (a SElemC) AssertTypeFor(n RElem) RElem {
 }
 func (a SElemDS) AssertTypeFor(n RElem) RElem {
 	return n.(SElemDS)
+}
+func (a LElem256) FromInt(n int) RElem {
+	if n >= 0 {
+		return LElem256{new(big.Int).SetInt64(int64(n))}
+	}
+	return LElem256{new(big.Int).Sub(LElem256Mod.Val, new(big.Int).SetInt64(-int64(n)))}
 }
 func (a LElem128) FromInt(n int) RElem {
 	if n >= 0 {
@@ -566,6 +651,9 @@ func (a SElemDS) FromInt(n int) RElem {
 	}
 	return SElemDS(0).Sub(SElemDS(-n))
 }
+func (a LElem256) FromUint64(n uint64) RElem {
+	return LElem256{new(big.Int).SetUint64(n)}
+}
 func (a LElem128) FromUint64(n uint64) RElem {
 	if LElem128Mod.Hi == 0 {
 		return LElem128(Uint128{0, n % LElem128Mod.Lo})
@@ -583,6 +671,13 @@ func (a SElemC) FromUint64(n uint64) RElem {
 }
 func (a SElemDS) FromUint64(n uint64) RElem {
 	return SElemDS(n % uint64(SElemDSMod))
+}
+func (a LElem256) FromFloat64(n float64, fracBits int) RElem {
+	if n < 0 {
+		return LElem256{LElem128Zero.FromFloat64(-n, fracBits).(LElem128).ToBigInt()}.Neg()
+	} else {
+		return LElem256{LElem128Zero.FromFloat64(n, fracBits).(LElem128).ToBigInt()}
+	}
 }
 func (a LElem128) FromFloat64(n float64, fracBits int) RElem {
 	sgn := 1
@@ -637,6 +732,18 @@ func (a SElemDS) FromFloat64(n float64, fracBits int) RElem {
 	panic("SElemDS is not meant for storing fractional values")
 	return a
 }
+func (a LElem256) Float64(fracBits int) float64 {
+	var sgn int
+	var b LElem256
+	if a.Val.Cmp(LElem256ModHalf.Val) < 0 {
+		sgn, b = 1, a
+	} else {
+		sgn, b = -1, a.Neg().(LElem256)
+	}
+
+	out, _ := new(big.Rat).SetFrac(b.Val, new(big.Int).Lsh(big.NewInt(1), uint(fracBits))).Float64()
+	return float64(sgn) * out
+}
 func (a LElem128) Float64(fracBits int) float64 {
 	var sgn int
 	var b LElem128
@@ -678,6 +785,9 @@ func (a SElemDS) Float64(fracBits int) float64 {
 	panic("SElemDS is not meant for storing fractional values")
 	return 0
 }
+func (a LElem256) FromBytes(buf []byte) RElem {
+	return LElem256{new(big.Int).SetBytes(buf[:a.NumBytes()])}
+}
 func (a LElem128) FromBytes(buf []byte) RElem {
 	return LElem128(Uint128{binary.LittleEndian.Uint64(buf), binary.LittleEndian.Uint64(buf[8:])})
 }
@@ -692,6 +802,12 @@ func (a SElemC) FromBytes(buf []byte) RElem {
 }
 func (a SElemDS) FromBytes(buf []byte) RElem {
 	return SElemDS(buf[0])
+}
+func (a LElem256) ToBytes(buf []byte) {
+	if a.Val.Sign() < 0 {
+		a.Val.Mod(a.Val, LElem256Mod.Val)
+	}
+	a.Val.FillBytes(buf[:a.NumBytes()])
 }
 func (a LElem128) ToBytes(buf []byte) {
 	binary.LittleEndian.PutUint64(buf, a.Hi)
@@ -709,6 +825,9 @@ func (a SElemC) ToBytes(buf []byte) {
 func (a SElemDS) ToBytes(buf []byte) {
 	buf[0] = byte(a)
 }
+func (a LElem256) Uint64() uint64 {
+	return a.Val.Uint64()
+}
 func (a LElem128) Uint64() uint64 {
 	return a.Lo
 }
@@ -723,6 +842,9 @@ func (a SElemC) Uint64() uint64 {
 }
 func (a SElemDS) Uint64() uint64 {
 	return uint64(a)
+}
+func (a LElem256) Zero() RElem {
+	return LElem256{big.NewInt(0)}
 }
 func (a LElem128) Zero() RElem {
 	return LElem128(Uint128{0, 0})
@@ -739,6 +861,9 @@ func (a SElemC) Zero() RElem {
 func (a SElemDS) Zero() RElem {
 	return SElemDS(0)
 }
+func (a LElem256) One() RElem {
+	return LElem256{big.NewInt(1)}
+}
 func (a LElem128) One() RElem {
 	return LElem128(Uint128{0, 1})
 }
@@ -753,6 +878,9 @@ func (a SElemC) One() RElem {
 }
 func (a SElemDS) One() RElem {
 	return SElemDS(1)
+}
+func (a LElem256) Modulus() *big.Int {
+	return new(big.Int).Set(LElem256Mod.Val)
 }
 func (a LElem128) Modulus() *big.Int {
 	return new(big.Int).Set(LElem128ModBig)
@@ -769,11 +897,14 @@ func (a SElemC) Modulus() *big.Int {
 func (a SElemDS) Modulus() *big.Int {
 	return new(big.Int).Set(SElemDSModBig)
 }
-func (a LElem2N) NumBytes() uint32 {
-	return LElem2NBytes
+func (a LElem256) NumBytes() uint32 {
+	return LElem256Bytes
 }
 func (a LElem128) NumBytes() uint32 {
 	return LElem128Bytes
+}
+func (a LElem2N) NumBytes() uint32 {
+	return LElem2NBytes
 }
 func (a LElemP) NumBytes() uint32 {
 	return LElemPBytes
@@ -783,6 +914,9 @@ func (a SElemC) NumBytes() uint32 {
 }
 func (a SElemDS) NumBytes() uint32 {
 	return SElemDSBytes
+}
+func (a LElem256) ModBitLength() int {
+	return LElem256ModBitLen
 }
 func (a LElem128) ModBitLength() int {
 	return LElem128ModBitLen
@@ -798,6 +932,12 @@ func (a SElemC) ModBitLength() int {
 }
 func (a SElemDS) ModBitLength() int {
 	return SElemDSModBitLen
+}
+func (a LElem256) GetBit(posFromLSB int) int {
+	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
+		panic("Invalid bit position")
+	}
+	return int(a.Val.Bit(posFromLSB))
 }
 func (a LElem128) GetBit(posFromLSB int) int {
 	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
@@ -832,6 +972,15 @@ func (a SElemDS) GetBit(posFromLSB int) int {
 		panic("Invalid bit position")
 	}
 	return int(a & (SElemDS(1) << posFromLSB))
+}
+func (a LElem256) Trunc(nBits int) RElem {
+	if nBits < 0 || nBits > a.ModBitLength() {
+		panic("Invalid number of bits")
+	} else if nBits == a.ModBitLength() {
+		return LElem256{new(big.Int).Set(a.Val)}
+	}
+
+	return LElem256{new(big.Int).Rem(a.Val, new(big.Int).Lsh(big.NewInt(1), uint(nBits)))}
 }
 func (a LElem128) Trunc(nBits int) RElem {
 	if nBits < 0 || nBits > a.ModBitLength() {
@@ -879,6 +1028,9 @@ func (a SElemDS) Trunc(nBits int) RElem {
 	}
 	return a % (SElemDS(1) << nBits)
 }
+func (a LElem256) TypeID() uint8 {
+	return LElem256UniqueID
+}
 func (a LElem128) TypeID() uint8 {
 	return LElem128UniqueID
 }
@@ -902,6 +1054,16 @@ func randBytes(rtype RElem, buf []byte, prg *frand.RNG) RElem {
 func (a LElem2N) Rand(prg *frand.RNG) RElem {
 	buf := make([]byte, a.NumBytes())
 	return randBytes(a, buf, prg)
+}
+func (a LElem256) Rand(prg *frand.RNG) RElem {
+	buf := make([]byte, 1 + ((a.ModBitLength() - 1) / 8))
+again:
+	prg.Read(buf)
+	r := new(big.Int).SetBytes(buf)
+	if r.Cmp(LElem256Mod.Val) >= 0 {
+		goto again
+	}
+	return LElem256{new(big.Int).SetBytes(buf)}
 }
 func (a LElem128) Rand(prg *frand.RNG) RElem {
 	buf := make([]byte, a.NumBytes())
@@ -951,6 +1113,16 @@ func (a LElem2N) RandBits(prg *frand.RNG, nbits int) RElem {
 	buf := make([]byte, a.NumBytes())
 	return randBytes(a, buf, prg).(LElem2N) % (LElem2N(1) << nbits)
 }
+func (a LElem256) RandBits(prg *frand.RNG, nbits int) RElem {
+	if nbits >= a.ModBitLength() {
+		panic("Requested bit length is larger than modulus")
+	}
+
+	buf := make([]byte, 1 + ((nbits - 1) / 8))
+	prg.Read(buf)
+
+	return LElem256{new(big.Int).Rem(new(big.Int).SetBytes(buf), new(big.Int).Lsh(big.NewInt(1), uint(nbits)))}
+}
 func (a LElem128) RandBits(prg *frand.RNG, nbits int) RElem {
 	if nbits >= a.ModBitLength() {
 		panic("Requested bit length is larger than modulus")
@@ -989,11 +1161,47 @@ func (a SElemDS) RandBits(prg *frand.RNG, nbits int) RElem {
 	return randBytes(a, buf, prg).(SElemDS) % (SElemDS(1) << nbits)
 }
 
+func (a LElem2N) FromBigInt(n *big.Int) RElem {
+	panic("Not implemented")
+	return nil
+}
+func (a LElemP) FromBigInt(n *big.Int) RElem {
+	panic("Not implemented")
+	return nil
+}
+func (a SElemC) FromBigInt(n *big.Int) RElem {
+	panic("Not implemented")
+	return nil
+}
+func (a SElemDS) FromBigInt(n *big.Int) RElem {
+	panic("Not implemented")
+	return nil
+}
+
+func (a LElem256) Copy() RElem {
+	return LElem256{new(big.Int).Set(a.Val)}
+}
+func (a LElem128) Copy() RElem {
+	return a
+}
+func (a LElem2N) Copy() RElem {
+	return a
+}
+func (a LElemP) Copy() RElem {
+	return a
+}
+func (a SElemC) Copy() RElem {
+	return a
+}
+func (a SElemDS) Copy() RElem {
+	return a
+}
+
 //Initalizes a RElemMatrix of size n RElems
 func InitRVec(val RElem, n int) RVec {
 	res := make(RVec, n)
 	for i := range res {
-		res[i] = val
+		res[i] = val.Copy()
 	}
 	return res
 }
@@ -1237,7 +1445,7 @@ func (a RMat) Copy() RMat {
 	for i := range a {
 		b[i] = make(RVec, c)
 		for j := range a[i] {
-			b[i][j] = a[i][j]
+			b[i][j] = a[i][j].Copy()
 		}
 	}
 	return b
@@ -1247,7 +1455,7 @@ func (a RVec) Copy() RVec {
 	n := len(a)
 	b := make(RVec, n)
 	for i := range a {
-		b[i] = a[i]
+		b[i] = a[i].Copy()
 	}
 	return b
 }
@@ -1258,7 +1466,7 @@ func (a RMat) Transpose() RMat {
 	for i := range b {
 		b[i] = make(RVec, r)
 		for j := range b[i] {
-			b[i][j] = a[j][i]
+			b[i][j] = a[j][i].Copy()
 		}
 	}
 	return b
