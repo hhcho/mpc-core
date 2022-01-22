@@ -33,7 +33,7 @@ type RElem interface {
 	RandBits(*frand.RNG, int) RElem
 	TypeID() uint8
 	ModBitLength() int
-	GetBit(int) int
+	GetBit(int) uint
 	Trunc(int) RElem
 	Copy() RElem
 }
@@ -44,11 +44,13 @@ type RMat []RVec
 type LElem256 struct {
 	Val *big.Int
 }
+
 const LElem256Bytes uint32 = 32 // Extra byte for sign bit for ease of marshalling
 var LElem256Zero LElem256 = LElem256{big.NewInt(0)}
-var LElem256Mod = LElem256{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 256), big.NewInt(189))} // 2^256 - 189
+var LElem256Mod = LElem256{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 256), big.NewInt(189))}    // 2^256 - 189
 var LElem256ModHalf = LElem256{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 255), big.NewInt(94))} // 2^255 - 94
 var LElem256ModBitLen int = (LElem256Mod).Val.BitLen()
+
 const LElem256UniqueID uint8 = 5
 
 type Uint128 struct {
@@ -402,7 +404,7 @@ func div128(Hi, Lo, y Uint128) (quo, rem Uint128) {
 	//return q1*two32 + q0, (un21*two32 + un0 - q0*y) >> s
 }
 
-var LElem128MFormNInv = LElem128Zero.FromBigInt(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128),new(big.Int).ModInverse(LElem128ModBig, new(big.Int).Lsh(big.NewInt(1), 128))))
+var LElem128MFormNInv = LElem128Zero.FromBigInt(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128), new(big.Int).ModInverse(LElem128ModBig, new(big.Int).Lsh(big.NewInt(1), 128))))
 var LElem128MFormR2 = LElem128Zero.FromBigInt(new(big.Int).Mod(new(big.Int).Lsh(big.NewInt(1), 2*128), LElem128ModBig))
 
 // REDC algorithm for modular arithmetic in Montgomery form
@@ -413,7 +415,7 @@ func (a LElem128) REDC(hi, lo Uint128) RElem {
 	t, carry1 := add128(mNHi, hi)
 	t, carry2 := add128(t, Uint128{0, carry})
 
-	if carry1 + carry2 > 0 || !lessThan128(t, Uint128(LElem128Mod)) {
+	if carry1+carry2 > 0 || !lessThan128(t, Uint128(LElem128Mod)) {
 		res, _ := sub128(t, Uint128(LElem128Mod))
 		return LElem128(res)
 	} else {
@@ -427,7 +429,7 @@ func (a LElem128) MulMForm(b interface{}) RElem {
 }
 
 func (a LElem128) ExitMForm() RElem {
-	return a.REDC(Uint128{0,0}, Uint128(a))
+	return a.REDC(Uint128{0, 0}, Uint128(a))
 }
 
 func (a LElem128) MForm() RElem {
@@ -933,45 +935,51 @@ func (a SElemC) ModBitLength() int {
 func (a SElemDS) ModBitLength() int {
 	return SElemDSModBitLen
 }
-func (a LElem256) GetBit(posFromLSB int) int {
+func (a LElem256) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
 		panic("Invalid bit position")
 	}
-	return int(a.Val.Bit(posFromLSB))
+	return a.Val.Bit(posFromLSB)
 }
-func (a LElem128) GetBit(posFromLSB int) int {
+func (a LElem128) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
 		panic("Invalid bit position")
 	}
 	if posFromLSB < 64 {
-		return int(a.Lo & (uint64(1) << posFromLSB))
+		return boolToUint((a.Lo & (uint64(1) << posFromLSB)) > 0)
 	}
-	return int(a.Hi & (uint64(1) << (posFromLSB - 64)))
+	return boolToUint((a.Hi & (uint64(1) << (posFromLSB - 64))) > 0)
 }
-func (a LElem2N) GetBit(posFromLSB int) int {
+func (a LElem2N) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
 		panic("Invalid bit position")
 	}
 	mask := LElem2N(1) << posFromLSB
-	return int(a & mask)
+	return boolToUint((a & mask) > 0)
 }
-func (a LElemP) GetBit(posFromLSB int) int {
+func (a LElemP) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB > a.ModBitLength() {
 		panic("Invalid bit position")
 	}
-	return int(a & (LElemP(1) << posFromLSB))
+	return boolToUint((a & (LElemP(1) << posFromLSB)) > 0)
 }
-func (a SElemC) GetBit(posFromLSB int) int {
+func (a SElemC) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB > a.ModBitLength() {
 		panic("Invalid bit position")
 	}
-	return int(a & (SElemC(1) << posFromLSB))
+	return boolToUint((a & (SElemC(1) << posFromLSB)) > 0)
 }
-func (a SElemDS) GetBit(posFromLSB int) int {
+func (a SElemDS) GetBit(posFromLSB int) uint {
 	if posFromLSB < 0 || posFromLSB > a.ModBitLength() {
 		panic("Invalid bit position")
 	}
-	return int(a & (SElemDS(1) << posFromLSB))
+	return boolToUint((a & (SElemDS(1) << posFromLSB)) > 0)
+}
+func boolToUint(b bool) uint {
+	if b {
+		return 1
+	}
+	return 0
 }
 func (a LElem256) Trunc(nBits int) RElem {
 	if nBits < 0 || nBits > a.ModBitLength() {
@@ -1056,7 +1064,7 @@ func (a LElem2N) Rand(prg *frand.RNG) RElem {
 	return randBytes(a, buf, prg)
 }
 func (a LElem256) Rand(prg *frand.RNG) RElem {
-	buf := make([]byte, 1 + ((a.ModBitLength() - 1) / 8))
+	buf := make([]byte, 1+((a.ModBitLength()-1)/8))
 again:
 	prg.Read(buf)
 	r := new(big.Int).SetBytes(buf)
@@ -1118,7 +1126,7 @@ func (a LElem256) RandBits(prg *frand.RNG, nbits int) RElem {
 		panic("Requested bit length is larger than modulus")
 	}
 
-	buf := make([]byte, 1 + ((nbits - 1) / 8))
+	buf := make([]byte, 1+((nbits-1)/8))
 	prg.Read(buf)
 
 	return LElem256{new(big.Int).Rem(new(big.Int).SetBytes(buf), new(big.Int).Lsh(big.NewInt(1), uint(nbits)))}
