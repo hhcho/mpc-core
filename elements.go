@@ -1937,3 +1937,26 @@ func (a RMat) ToInt() [][]int {
 	return out
 
 }
+
+func (a RVec) Filter(filt []bool) RVec {
+	if len(a) != len(filt) {
+		panic("Filter length does not match vector")
+	}
+
+	count := 0
+	for i := range filt {
+		if filt[i] {
+			count++
+		}
+	}
+
+	out := make(RVec, count)
+	index := 0
+	for i := range filt {
+		if filt[i] {
+			out[index] = a[i]
+			index++
+		}
+	}
+	return out
+}
