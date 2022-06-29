@@ -106,3 +106,48 @@ func sub256(a, b Uint256, borrowin uint64) (c Uint256, borrow uint64) {
 	c.Hi, borrow = sub128(a.Hi, b.Hi, borrow)
 	return
 }
+func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
+	return
+}
+
+func (a LElem256) Mul(b interface{}) RElem {
+	Hi, Lo := mul256(Uint256(a), Uint256(b.(LElem256)))
+	if lessThan256(Hi, Uint256(LElem256Mod)) {
+		_, r := div256(Hi, Lo, Uint256(LElem256Mod))
+		return LElem256(r)
+	}
+	_, r := div256(Uint256{Uint128{0, 0}, Uint128{0, 0}}, Hi, Uint256(LElem256Mod))
+	_, r = div256(r, Lo, Uint256(LElem256Mod))
+	return Lelem256(r)
+}
+func uint64To256(x uint64) Uint256 {
+	return Uint256{Uint128{0, 0}, Uint128{0, x}}
+}
+
+func (a LElem256) Add(b interface{}) RElem {
+	out, carry := add256(Uint256(a), Uint256(b.(LElem256)), 0)
+	_, rem := div256(uint64To256(carry), out, Uint256(LElem256Mod))
+	return LElem256(rem)
+}
+
+func (a LElem256) Sub(b interface{}) RElem {
+	return a.Add(b.(LElem256).Neg())
+}
+
+func (a LElem256) Neg() RElem {
+	if equal128(a.Hi, Uint128{0, 0}) && equal128(a.Lo, Uint128{0, 0}) {
+		return a
+	}
+	out, _ := sub256(Uint256(LElem256Mod), Uint256(a), 0)
+	return LElem256(out)
+}
+
+func (a LElem256) Copy() RElem {
+	return a
+}
+func (a LElem256) Uint64() uint64 {
+	return a.Lo.Lo
+}
+func (a LElem256) One() RElem {
+	return LElem256(Uint256{Uint128{0, 0}, Uint128{0, 1}})
+}
