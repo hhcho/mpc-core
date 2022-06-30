@@ -28,11 +28,27 @@ func TestAddSub256(t *testing.T) {
 
 		dif := new(big.Int).Sub(c.ToBigInt(), ctest.ToBigInt())
 		if !dif.IsUint64() {
-			fmt.Println(c.ToBigInt(), ctest.ToBigInt())
-			t.Fatalf("can't be a uint64")
+			fmt.Println(LElem256testModBig)
+			fmt.Println(LElem256Mod)
+			fmt.Println(a.(LElem256).ToBigInt())
+			fmt.Println(atest.(LElem256test).ToBigInt())
+			fmt.Println(b.(LElem256).ToBigInt())
+			fmt.Println(btest.(LElem256test).ToBigInt())
+			fmt.Println(c.ToBigInt(), "answer, add+div")
+			fmt.Println(ctest.ToBigInt(), "test, add+div")
+
+			out, carry := add256(Uint256(atest.(LElem256test)), Uint256(btest.(LElem256test)), 0)
+
+			fmt.Println(new(big.Int).Add(a.(LElem256).ToBigInt(), b.(LElem256).ToBigInt()), "answer, add")
+			fmt.Println(carry, LElem256test(out).ToBigInt(), "test, add")
+
+			_, rem := div256(uint64To256(carry), out, Uint256(LElem256testMod))
+			fmt.Println(LElem256test(rem).ToBigInt(), "test, div after add")
+
+			t.Fatalf(fmt.Sprint("can't be a uint64:", dif))
 		} else {
 			if dif.Uint64() != 0 {
-				t.Fatalf("not equal to zero")
+				t.Fatalf(fmt.Sprint("not equal to zero:", dif))
 			}
 		}
 	}
