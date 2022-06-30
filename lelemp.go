@@ -177,3 +177,7 @@ func (a LElemP) FromBigInt(n *big.Int) RElem {
 	panic("Not implemented")
 	return nil
 }
+
+func (a LElemP) Copy() RElem {
+	return a
+}

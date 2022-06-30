@@ -327,6 +327,7 @@ func (a LElem128) Inv() RElem {
 	}
 	return a.FromBigInt(bInv)
 }
+
 func (a LElem128) AssertTypeFor(n RElem) RElem {
 	return n.(LElem128)
 }
@@ -375,6 +376,10 @@ func (a LElem128) Float64(fracBits int) float64 {
 
 func (a LElem128) FromBytes(buf []byte) RElem {
 	return LElem128(Uint128{binary.LittleEndian.Uint64(buf), binary.LittleEndian.Uint64(buf[8:])})
+}
+
+func frombytes128(buf []byte) Uint128 {
+	return Uint128{binary.LittleEndian.Uint64(buf), binary.LittleEndian.Uint64(buf[8:])}
 }
 
 func (a LElem128) ToBytes(buf []byte) {

@@ -146,3 +146,7 @@ func (a SElemC) FromBigInt(n *big.Int) RElem {
 	panic("Not implemented")
 	return nil
 }
+
+func (a SElemC) Copy() RElem {
+	return a
+}
