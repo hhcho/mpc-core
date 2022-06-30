@@ -2,6 +2,8 @@ package mpc_core
 
 import (
 	"math/big"
+
+	"github.com/hhcho/frand"
 )
 
 type Uint256 struct {
@@ -35,6 +37,40 @@ var LElem256ModBig *big.Int = nil
 
 //TODO
 var LElem256ModHalfBig *big.Int = nil
+
+//TODO
+func (a LElem256) ToBigInt() *big.Int {
+	r := new(big.Int)
+	return r
+}
+
+//TODO
+func (a LElem256) FromBigInt(n *big.Int) RElem {
+	return LElem128{}
+}
+
+//TODO
+func (a LElem256) ToBigFloat(fracBits int) *big.Float {
+	r := new(big.Float)
+	return r
+}
+
+//TODO
+func (a LElem256) ToSignedBigInt() *big.Int {
+	r := new(big.Int)
+	return r
+}
+
+//TODO
+func (a LElem256) ToSignedBigFloat(fracBits int) *big.Float {
+	r := new(big.Float)
+	return r
+}
+
+//TODO
+func (a LElem256) FromBigFloat(n *big.Float, fracBits int) RElem {
+	return LElem128{}
+}
 
 func mul256(a, b Uint256) (Hi, Lo Uint256) {
 	h00, r0 := mul128(a.Lo, b.Lo)
@@ -163,15 +199,35 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	//return q1*two32 + q0, (un21*two32 + un0 - q0*y) >> s
 }
 
+//TODO
+var LElem256MFormNInv = LElem256{}
+var LElem256MFormR2 = LElem256{}
+
+//TODO
+// REDC algorithm for modular arithmetic in Montgomery form
+func (a LElem256) REDC(hi, lo Uint128) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) MulMForm(b interface{}) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) ExitMForm() RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) MForm() RElem {
+	// Multiply by R^2 mod N
+	return LElem256{}
+}
+
+//TODO
 func (a LElem256) Mul(b interface{}) RElem {
-	Hi, Lo := mul256(Uint256(a), Uint256(b.(LElem256)))
-	if lessThan256(Hi, Uint256(LElem256Mod)) {
-		_, r := div256(Hi, Lo, Uint256(LElem256Mod))
-		return LElem256(r)
-	}
-	_, r := div256(Uint256{Uint128{0, 0}, Uint128{0, 0}}, Hi, Uint256(LElem256Mod))
-	_, r = div256(r, Lo, Uint256(LElem256Mod))
-	return Lelem256(r)
+	return LElem256{}
 }
 func uint64To256(x uint64) Uint256 {
 	return Uint256{Uint128{0, 0}, Uint128{0, x}}
@@ -195,6 +251,86 @@ func (a LElem256) Neg() RElem {
 	return LElem256(out)
 }
 
+//TODO
+func (a LElem256) Inv() RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) AssertTypeFor(n RElem) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) FromInt(n int) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) FromUint64(n uint64) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) FromFloat64(n float64, fracBits int) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) Float64(fracBits int) float64 {
+	return 0
+}
+
+//TODO
+func (a LElem256) FromBytes(buf []byte) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) ToBytes(buf []byte) {
+	return
+}
+func (a LElem256) Zero() RElem {
+	return LElem256(Uint256{Uint128{0, 0}, Uint128{0, 0}})
+}
+
+//TODO
+func (a LElem256) Modulus() *big.Int {
+	r := new(big.Int)
+	return r
+}
+
+//TODO
+func (a LElem256) NumBytes() uint32 {
+	return LElem256Bytes
+}
+
+func (a LElem256) ModBitLength() int {
+	return LElem256ModBitLen
+}
+
+//TODO
+func (a LElem256) GetBit(posFromLSB int) uint {
+	return 0
+}
+
+//TODO
+func (a LElem256) Trunc(nBits int) RElem {
+	return LElem256{}
+}
+func (a LElem256) TypeID() uint8 {
+	return LElem128UniqueID
+}
+
+//TODO
+func (a LElem256) Rand(prg *frand.RNG) RElem {
+	return LElem256{}
+}
+
+//TODO
+func (a LElem256) RandBits(prg *frand.RNG, nbits int) RElem {
+	return LElem256{}
+}
 func (a LElem256) Copy() RElem {
 	return a
 }
