@@ -106,8 +106,61 @@ func sub256(a, b Uint256, borrowin uint64) (c Uint256, borrow uint64) {
 	c.Hi, borrow = sub128(a.Hi, b.Hi, borrow)
 	return
 }
+
 func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
-	return
+	if equal128(y.Hi, Uint128{0, 0}) && equal128(y.Lo, Uint128{0, 0}) {
+		panic("Divide by zero error")
+	}
+	if !lessThan256(Hi, y) {
+		panic("Overflow error")
+	}
+	s := uint(leadingZeros256(y))
+	y = lsh256(y, s)
+	yn1 := Uint256{Uint128{0, 0}, y.Hi}
+	yn0 := Uint256{Uint128{0, 0}, y.Lo}
+	un32 := or256(lsh256(Hi, s), rsh256(Lo, 256-s))
+	un10 := lsh256(Lo, s)
+	un1 := Uint256{Uint128{0, 0}, un10.Hi}
+	un0 := Uint256{Uint128{0, 0}, un10.Lo}
+	q1hi, r := div128(Uint128{0, 0}, un32.Hi, yn1.Lo)
+	q1lo, _ := div128(r, un32.Lo, yn1.Lo)
+	q1 := Uint256{q1hi, q1lo}
+	_, t := mul256(q1, yn1)
+	rhat, _ := sub256(un32, t, 0) //rhat := un32 - q1*yn1
+
+	_, t = mul256(q1, yn0)
+	for !equal128(q1.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un1.Lo}, t) {
+		//for q1 >= two32 || q1*yn0 > two32*rhat+un1 {
+		q1, _ = sub256(q1, uint64To256(1), 0)  //	q1--
+		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
+		if !equal128(rhat.Hi, Uint128{0, 0}) { //if rhat >= two32 {
+			break
+		}
+	}
+	_, q1y := mul256(q1, y)
+	un21, _ := sub256(Uint256{un32.Lo, un1.Lo}, q1y, 0) //un21 := un32*two32 + un1 - q1*y
+	q0hi, r := div128(Uint128{0, 0}, un21.Hi, yn1.Lo)
+	q0lo, _ := div128(r, un21.Lo, yn1.Lo) //q0 := un21 / yn1
+	q0 := Uint256{q0hi, q0lo}
+	_, q0yn1 := mul256(q0, yn1)
+	rhat, _ = sub256(un21, q0yn1, 0) //rhat = un21 - q0*yn1
+
+	_, t = mul256(q0, yn0)
+	for !equal128(q0.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un0.Lo}, t) {
+		//for q0 >= two32 || q0*yn0 > two32*rhat+un0 {
+		q0, _ = sub256(q0, uint64To256(1), 0)  //	q0--
+		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
+		if !equal128(rhat.Hi, Uint128{0, 0}) { //if rhat >= two32 {
+			break
+		}
+	}
+	quo = Uint256{q1.Lo, q0.Lo}
+
+	_, q0y := mul256(q0, y)
+	rem, _ = sub256(Uint256{un21.Lo, un0.Lo}, q0y, 0)
+	rem = rsh256(rem, s)
+	return quo, rem
+	//return q1*two32 + q0, (un21*two32 + un0 - q0*y) >> s
 }
 
 func (a LElem256) Mul(b interface{}) RElem {
