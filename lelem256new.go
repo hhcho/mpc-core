@@ -37,7 +37,7 @@ var LElem256testModHalfBig *big.Int = new(big.Int).Sub(big.NewInt(0).Lsh(big.New
 func (a LElem256test) ToBigInt() *big.Int {
 	hii := new(big.Int).Lsh(new(big.Int).SetUint64(a.Hi.Hi), 256-64)
 	hilo := new(big.Int).Lsh(new(big.Int).SetUint64(a.Hi.Lo), 256-128)
-	lohi := new(big.Int).Lsh(new(big.Int).SetUint64(a.Hi.Lo), 64)
+	lohi := new(big.Int).Lsh(new(big.Int).SetUint64(a.Lo.Hi), 64)
 	lo := new(big.Int).SetUint64(a.Lo.Lo)
 
 	sumHi := new(big.Int).Add(hii, hilo)
@@ -261,19 +261,38 @@ func (a LElem256test) FromInt(n int) RElem {
 	return LElem256test(uint64To256(0)).Sub(uint64To256(uint64(-n)))
 }
 
-//TODO
 func (a LElem256test) FromUint64(n uint64) RElem {
-	return LElem256test{}
+	return LElem256test(uint64To256(n))
 }
 
-//TODO
 func (a LElem256test) FromFloat64(n float64, fracBits int) RElem {
-	return LElem256test{}
+	if n < 0 {
+		return LElem256test{Hi: Uint128{0, 0}, Lo: Uint128(LElem128Zero.FromFloat64(-n, fracBits).(LElem128))}.Neg()
+	} else {
+		return LElem256test{Hi: Uint128{0, 0}, Lo: Uint128(LElem128Zero.FromFloat64(n, fracBits).(LElem128))}
+	}
 }
 
-//TODO
 func (a LElem256test) Float64(fracBits int) float64 {
-	return 0
+	var sgn int
+	var b LElem256test
+	if lessThan256(Uint256(a), LElem256testModHalf) {
+		sgn, b = 1, a
+	} else {
+		sgn, b = -1, a.Neg().(LElem256test)
+	}
+
+	shift := float64(uint64(1) << fracBits)
+	const shift64 = 1 << 64
+	const shift128 = 1 << 128
+	const shift192 = 1 << 192
+
+	val := float64(b.Lo.Lo) / shift
+	val += float64(b.Lo.Hi) / shift * shift64
+	val += float64(b.Hi.Lo) / shift * shift128
+	val += float64(b.Hi.Hi) / shift * shift192
+
+	return float64(sgn) * val
 }
 
 func (a LElem256test) FromBytes(buf []byte) RElem {
@@ -304,9 +323,18 @@ func (a LElem256test) ModBitLength() int {
 	return LElem256testModBitLen
 }
 
-//TODO
 func (a LElem256test) GetBit(posFromLSB int) uint {
-	return 0
+	if posFromLSB < 0 || posFromLSB >= a.ModBitLength() {
+		panic("Invalid bit position")
+	}
+	if posFromLSB < 64 {
+		return boolToUint((a.Lo.Lo & (uint64(1) << posFromLSB)) > 0)
+	} else if posFromLSB < 128 {
+		return boolToUint((a.Lo.Hi & (uint64(1) << (posFromLSB - 64))) > 0)
+	} else if posFromLSB < 192 {
+		return boolToUint((a.Hi.Lo & (uint64(1) << (posFromLSB - 128))) > 0)
+	}
+	return boolToUint((a.Hi.Hi & (uint64(1) << (posFromLSB - 192))) > 0)
 }
 
 func (a LElem256test) Trunc(nBits int) RElem {
