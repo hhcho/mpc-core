@@ -310,7 +310,7 @@ func (a LElem256) Zero() RElem {
 }
 
 func (a LElem256) Modulus() *big.Int {
-	r := new(big.Int).Set(LElem128ModBig)
+	r := new(big.Int).Set(LElem256ModBig)
 	return r
 }
 
