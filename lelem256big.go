@@ -17,7 +17,7 @@ var LElem256BigMod = LElem256Big{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1
 var LElem256BigModHalf = LElem256Big{new(big.Int).Sub(big.NewInt(0).Lsh(big.NewInt(1), 255), big.NewInt(94))} // 2^255 - 94
 var LElem256BigModBitLen int = (LElem256BigMod).Val.BitLen()
 
-const LElem256BigUniqueID uint8 = 5
+const LElem256BigUniqueID uint8 = 8
 
 /* LElem256Big */
 
