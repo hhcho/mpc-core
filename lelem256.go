@@ -225,8 +225,11 @@ func uint64To256(x uint64) Uint256 {
 
 func (a LElem256) Add(b interface{}) RElem {
 	out, carry := Add256(Uint256(a), Uint256(b.(LElem256)), 0)
-	_, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
-	return LElem256(rem)
+	if carry > 0 {
+		rem, _ := Sub256(out, Uint256(LElem256Mod), 0)
+		return LElem256(rem)
+	}
+	return LElem256(out)
 }
 
 func (a LElem256) Sub(b interface{}) RElem {

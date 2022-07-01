@@ -36,17 +36,29 @@ func TestAddSub256(t *testing.T) {
 			fmt.Println(c.ToBigInt(), "answer, add+div")
 			fmt.Println(ctest.ToBigInt(), "test, add+div")
 
-			out, carry := add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
+			out, carry := Add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
 
 			fmt.Println(new(big.Int).Add(a.(LElem256Big).ToBigInt(), b.(LElem256Big).ToBigInt()), "answer, add")
 			fmt.Println(carry, LElem256(out).ToBigInt(), "test, add")
 
-			_, rem := div256(uint64To256(carry), out, Uint256(LElem256Mod))
+			_, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
 			fmt.Println(LElem256(rem).ToBigInt(), "test, div after add")
 
 			t.Fatalf(fmt.Sprint("can't be a uint64:", dif))
 		} else {
 			if dif.Uint64() != 0 {
+				fmt.Println(c.ToBigInt(), "answer, add+div")
+				fmt.Println(ctest.ToBigInt(), "test, add+div")
+
+				out, carry := Add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
+
+				fmt.Println(new(big.Int).Add(a.(LElem256Big).ToBigInt(), b.(LElem256Big).ToBigInt()), "answer, add")
+				fmt.Println(carry, LElem256(out).ToBigInt(), "test, add")
+
+				_, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
+				fmt.Println(LElem256(rem).ToBigInt(), "test, div after add")
+				rem, _ = Sub256(out, Uint256(LElem256Mod), 0)
+				fmt.Println(LElem256(rem).ToBigInt(), "test, sub after add")
 				t.Fatalf(fmt.Sprint("not equal to zero:", dif))
 			}
 		}
@@ -55,12 +67,12 @@ func TestAddSub256(t *testing.T) {
 			fmt.Println(c.ToBigInt(), "answer, sub+div")
 			fmt.Println(ctest.ToBigInt(), "test, sub+div")
 
-			out, carry := add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
+			out, carry := Add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
 
 			fmt.Println(new(big.Int).Sub(a.(LElem256Big).ToBigInt(), b.(LElem256Big).ToBigInt()), "answer, sub")
 			fmt.Println(carry, LElem256(out).ToBigInt(), "test, sub")
 
-			_, rem := div256(uint64To256(carry), out, Uint256(LElem256Mod))
+			_, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
 			fmt.Println(LElem256(rem).ToBigInt(), "test, div after sub")
 
 			t.Fatalf(fmt.Sprint("can't be a uint64:", dif))
@@ -203,12 +215,12 @@ func TestMul256(t *testing.T) {
 			fmt.Println(c.ToBigInt(), "answer")
 			fmt.Println(ctest.ToBigInt(), "test")
 
-			// out, carry := add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
+			// out, carry := Add256(Uint256(atest.(LElem256)), Uint256(btest.(LElem256)), 0)
 
 			// fmt.Println(new(big.Int).Add(a.(LElem256).ToBigInt(), b.(LElem256).ToBigInt()), "answer, add")
 			// fmt.Println(carry, LElem256(out).ToBigInt(), "test, add")
 
-			// _, rem := div256(uint64To256(carry), out, Uint256(LElem256Mod))
+			// _, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
 			// fmt.Println(LElem256(rem).ToBigInt(), "test, div after add")
 
 			t.Fatalf(fmt.Sprint("can't be a uint64:", dif))
