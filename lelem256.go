@@ -2,7 +2,6 @@ package mpc_core
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
 	"github.com/hhcho/frand"
@@ -176,7 +175,6 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	rhat, _ := sub256(un32, t, 0) //rhat := un32 - q1*yn1 //should be and is 0
 	_, t = mul256(q1, yn0)        //should be and is 0
 	for !equal128(q1.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un1.Lo}, t) {
-		fmt.Println("In here")
 		//for q1 >= two32 || q1*yn0 > two32*rhat+un1 {
 		q1, _ = sub256(q1, uint64To256(1), 0)  //	q1--
 		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
@@ -190,13 +188,11 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	q0hi, r := div128(Uint128{0, 0}, un21.Hi, yn1.Lo)
 	q0lo, _ := div128(r, un21.Lo, yn1.Lo) //q0 := un21 / yn1
 	q0 := Uint256{q0hi, q0lo}
-	fmt.Println("q0", q0)
 	_, q0yn1 := mul256(q0, yn1)
 	rhat, _ = sub256(un21, q0yn1, 0) //rhat = un21 - q0*yn1
 
 	_, t = mul256(q0, yn0)
 	for !equal128(q0.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un0.Lo}, t) {
-		fmt.Println("In second loop")
 		//for q0 >= two32 || q0*yn0 > two32*rhat+un0 {
 		q0, _ = sub256(q0, uint64To256(1), 0)  //	q0--
 		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
@@ -205,7 +201,6 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 		}
 	}
 	quo = Uint256{q1.Lo, q0.Lo}
-	fmt.Println("quo", quo)
 	_, q0y := mul256(q0, y)
 	rem, _ = sub256(Uint256{un21.Lo, un0.Lo}, q0y, 0)
 	rem = rsh256(rem, s)
@@ -215,10 +210,7 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 
 func (a LElem256) Mul(b interface{}) RElem {
 	Hi, Lo := mul256(Uint256(a), Uint256(b.(LElem256)))
-	actual := new(big.Int).Add(new(big.Int).Lsh(LElem256(Hi).ToBigInt(), 256), LElem256(Lo).ToBigInt())
-	fmt.Println("test", actual)
 	if lessThan256(Hi, Uint256(LElem256Mod)) {
-		fmt.Println("in here")
 		_, r := div256(Hi, Lo, Uint256(LElem256Mod))
 		return LElem256(r)
 	}
