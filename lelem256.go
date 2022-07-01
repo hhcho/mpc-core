@@ -83,7 +83,7 @@ func (a LElem256) FromBigFloat(n *big.Float, fracBits int) RElem {
 	return a.FromBigInt(roundFloat(f))
 }
 
-func mul256(a, b Uint256) (Hi, Lo Uint256) {
+func Mul256(a, b Uint256) (Hi, Lo Uint256) {
 	h00, r0 := mul128(a.Lo, b.Lo) //r0
 	h01, l01 := mul128(a.Lo, b.Hi)
 	h10, l10 := mul128(a.Hi, b.Lo)
@@ -171,9 +171,9 @@ func Div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	q1hi, r := div128(Uint128{0, 0}, un32.Hi, yn1.Lo)
 	q1lo, _ := div128(r, un32.Lo, yn1.Lo)
 	q1 := Uint256{q1hi, q1lo}     //should be and is 0
-	_, t := mul256(q1, yn1)       //should be and is 0
+	_, t := Mul256(q1, yn1)       //should be and is 0
 	rhat, _ := Sub256(un32, t, 0) //rhat := un32 - q1*yn1 //should be and is 0
-	_, t = mul256(q1, yn0)        //should be and is 0
+	_, t = Mul256(q1, yn0)        //should be and is 0
 	for !equal128(q1.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un1.Lo}, t) {
 		//for q1 >= two32 || q1*yn0 > two32*rhat+un1 {
 		q1, _ = Sub256(q1, uint64To256(1), 0)  //	q1--
@@ -182,16 +182,16 @@ func Div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 			break
 		}
 	}
-	_, q1y := mul256(q1, y)
+	_, q1y := Mul256(q1, y)
 	un21, _ := Sub256(Uint256{un32.Lo, un1.Lo}, q1y, 0) //un21 := un32*two32 + un1 - q1*y
 
 	q0hi, r := div128(Uint128{0, 0}, un21.Hi, yn1.Lo)
 	q0lo, _ := div128(r, un21.Lo, yn1.Lo) //q0 := un21 / yn1
 	q0 := Uint256{q0hi, q0lo}
-	_, q0yn1 := mul256(q0, yn1)
+	_, q0yn1 := Mul256(q0, yn1)
 	rhat, _ = Sub256(un21, q0yn1, 0) //rhat = un21 - q0*yn1
 
-	_, t = mul256(q0, yn0)
+	_, t = Mul256(q0, yn0)
 	for !equal128(q0.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un0.Lo}, t) {
 		//for q0 >= two32 || q0*yn0 > two32*rhat+un0 {
 		q0, _ = Sub256(q0, uint64To256(1), 0)  //	q0--
@@ -201,7 +201,7 @@ func Div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 		}
 	}
 	quo = Uint256{q1.Lo, q0.Lo}
-	_, q0y := mul256(q0, y)
+	_, q0y := Mul256(q0, y)
 	rem, _ = Sub256(Uint256{un21.Lo, un0.Lo}, q0y, 0)
 	rem = rsh256(rem, s)
 	return quo, rem
@@ -209,7 +209,7 @@ func Div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 }
 
 func (a LElem256) Mul(b interface{}) RElem {
-	Hi, Lo := mul256(Uint256(a), Uint256(b.(LElem256)))
+	Hi, Lo := Mul256(Uint256(a), Uint256(b.(LElem256)))
 	if lessThan256(Hi, Uint256(LElem256Mod)) {
 		_, r := Div256(Hi, Lo, Uint256(LElem256Mod))
 		return LElem256(r)
