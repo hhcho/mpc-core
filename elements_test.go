@@ -299,6 +299,52 @@ func TestTrunc256(t *testing.T) {
 	}
 }
 
+func TestFromToInt(t *testing.T) {
+	source := rand.NewSource(0)
+	r := rand.New(source)
+	for i := 0; i < 10000; i++ {
+		aint := r.Int()
+		a := new(LElem256Big).FromInt(aint).(LElem256Big)
+		atest := new(LElem256).FromInt(aint).(LElem256)
+		dif := new(big.Int).Sub(a.ToBigInt(), atest.ToBigInt())
+		ans := dif.Uint64()
+		if ans != 0.0 {
+			fmt.Println(a.ToBigInt(), atest.ToBigInt())
+			t.Fatalf("can't be a uint64")
+		}
+	}
+}
+func TestFromToUInt64(t *testing.T) {
+	source := rand.NewSource(0)
+	r := rand.New(source)
+	for i := 0; i < 10000; i++ {
+		aint := r.Uint64()
+		a := new(LElem256Big).FromUint64(aint).(LElem256Big)
+		atest := new(LElem256).FromUint64(aint).(LElem256)
+		dif := new(big.Int).Sub(a.ToBigInt(), atest.ToBigInt())
+		ans := dif.Uint64()
+		if ans != 0.0 {
+			fmt.Println(a.ToBigInt(), atest.ToBigInt())
+			t.Fatalf("can't be a uint64")
+		}
+	}
+}
+func TestFromToFloat64(t *testing.T) {
+	// source := rand.NewSource(0)
+	// r := rand.New(source)
+	for i := 0; i < 10000; i++ {
+		aint := 1.203410921
+		a := new(LElem256Big).FromFloat64(aint, 50).(LElem256Big)
+		atest := new(LElem256).FromFloat64(aint, 50).(LElem256)
+		dif := new(big.Int).Sub(a.ToBigInt(), atest.ToBigInt())
+		ans := dif.Uint64()
+		if ans != 0.0 {
+			fmt.Println(a.ToBigInt(), atest.ToBigInt())
+			t.Fatalf("can't be a uint64")
+		}
+	}
+}
+
 func TestChangeInLoop(t *testing.T) {
 	runtime.GOMAXPROCS(15)
 	nblocks := []int{1, 5, 15}

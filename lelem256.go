@@ -253,11 +253,17 @@ func (a LElem256) AssertTypeFor(n RElem) RElem {
 	return n.(LElem256)
 }
 
+// if n >= 0 {
+// 	return LElem128(Uint128{0, 0}).Add(LElem128(Uint128{0, uint64(n)}))
+// }
+// return LElem128(Uint128{0, 0}).Sub(LElem128(Uint128{0, uint64(-n)}))
 func (a LElem256) FromInt(n int) RElem {
+	uint64To256(uint64(n))
 	if n >= 0 {
-		return LElem256(uint64To256(0)).Add(uint64To256(uint64(n)))
+
+		return LElem256(uint64To256(0)).Add(LElem256(uint64To256(uint64(n))))
 	}
-	return LElem256(uint64To256(0)).Sub(uint64To256(uint64(-n)))
+	return LElem256(uint64To256(0)).Sub(LElem256(uint64To256(uint64(-n))))
 }
 
 func (a LElem256) FromUint64(n uint64) RElem {
