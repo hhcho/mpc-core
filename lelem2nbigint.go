@@ -166,7 +166,7 @@ func (a LElem2NBigInt) Trunc(nBits int) RElem {
 		return LElem2NBigInt{new(big.Int).Set(a.Val)}
 	}
 
-	return LElem256{new(big.Int).Rem(a.Val, new(big.Int).Lsh(big.NewInt(1), uint(nBits)))}
+	return LElem256Big{new(big.Int).Rem(a.Val, new(big.Int).Lsh(big.NewInt(1), uint(nBits)))}
 }
 
 func (a LElem2NBigInt) TypeID() uint8 {
