@@ -17,8 +17,8 @@ const LElem256Bytes uint32 = 32
 
 func initLElem256RandBnd() LElem256 {
 	mOne := Uint256{Uint128{^uint64(0), ^uint64(0)}, Uint128{^uint64(0), ^uint64(0)}}
-	_, rem := div256(uint64To256(0), mOne, Uint256(LElem256Mod))
-	out, _ := sub256(mOne, rem, 0)
+	_, rem := Div256(uint64To256(0), mOne, Uint256(LElem256Mod))
+	out, _ := Sub256(mOne, rem, 0)
 	return LElem256(out)
 }
 
@@ -141,19 +141,19 @@ func lessThan256(a, b Uint256) bool {
 	return lessThan128(a.Hi, b.Hi)
 }
 
-func add256(a, b Uint256, carryin uint64) (c Uint256, carry uint64) {
+func Add256(a, b Uint256, carryin uint64) (c Uint256, carry uint64) {
 	c.Lo, carry = add128(a.Lo, b.Lo, carryin)
 	c.Hi, carry = add128(a.Hi, b.Hi, carry)
 	return
 }
 
-func sub256(a, b Uint256, borrowin uint64) (c Uint256, borrow uint64) {
+func Sub256(a, b Uint256, borrowin uint64) (c Uint256, borrow uint64) {
 	c.Lo, borrow = sub128(a.Lo, b.Lo, borrowin)
 	c.Hi, borrow = sub128(a.Hi, b.Hi, borrow)
 	return
 }
 
-func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
+func Div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	if equal128(y.Hi, Uint128{0, 0}) && equal128(y.Lo, Uint128{0, 0}) {
 		panic("Divide by zero error")
 	}
@@ -172,37 +172,37 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 	q1lo, _ := div128(r, un32.Lo, yn1.Lo)
 	q1 := Uint256{q1hi, q1lo}     //should be and is 0
 	_, t := mul256(q1, yn1)       //should be and is 0
-	rhat, _ := sub256(un32, t, 0) //rhat := un32 - q1*yn1 //should be and is 0
+	rhat, _ := Sub256(un32, t, 0) //rhat := un32 - q1*yn1 //should be and is 0
 	_, t = mul256(q1, yn0)        //should be and is 0
 	for !equal128(q1.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un1.Lo}, t) {
 		//for q1 >= two32 || q1*yn0 > two32*rhat+un1 {
-		q1, _ = sub256(q1, uint64To256(1), 0)  //	q1--
-		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
+		q1, _ = Sub256(q1, uint64To256(1), 0)  //	q1--
+		rhat, _ = Add256(rhat, yn1, 0)         //rhat += yn1
 		if !equal128(rhat.Hi, Uint128{0, 0}) { //if rhat >= two32 {
 			break
 		}
 	}
 	_, q1y := mul256(q1, y)
-	un21, _ := sub256(Uint256{un32.Lo, un1.Lo}, q1y, 0) //un21 := un32*two32 + un1 - q1*y
+	un21, _ := Sub256(Uint256{un32.Lo, un1.Lo}, q1y, 0) //un21 := un32*two32 + un1 - q1*y
 
 	q0hi, r := div128(Uint128{0, 0}, un21.Hi, yn1.Lo)
 	q0lo, _ := div128(r, un21.Lo, yn1.Lo) //q0 := un21 / yn1
 	q0 := Uint256{q0hi, q0lo}
 	_, q0yn1 := mul256(q0, yn1)
-	rhat, _ = sub256(un21, q0yn1, 0) //rhat = un21 - q0*yn1
+	rhat, _ = Sub256(un21, q0yn1, 0) //rhat = un21 - q0*yn1
 
 	_, t = mul256(q0, yn0)
 	for !equal128(q0.Hi, Uint128{0, 0}) || lessThan256(Uint256{rhat.Lo, un0.Lo}, t) {
 		//for q0 >= two32 || q0*yn0 > two32*rhat+un0 {
-		q0, _ = sub256(q0, uint64To256(1), 0)  //	q0--
-		rhat, _ = add256(rhat, yn1, 0)         //rhat += yn1
+		q0, _ = Sub256(q0, uint64To256(1), 0)  //	q0--
+		rhat, _ = Add256(rhat, yn1, 0)         //rhat += yn1
 		if !equal128(rhat.Hi, Uint128{0, 0}) { //if rhat >= two32 {
 			break
 		}
 	}
 	quo = Uint256{q1.Lo, q0.Lo}
 	_, q0y := mul256(q0, y)
-	rem, _ = sub256(Uint256{un21.Lo, un0.Lo}, q0y, 0)
+	rem, _ = Sub256(Uint256{un21.Lo, un0.Lo}, q0y, 0)
 	rem = rsh256(rem, s)
 	return quo, rem
 	//return q1*two32 + q0, (un21*two32 + un0 - q0*y) >> s
@@ -211,12 +211,12 @@ func div256(Hi, Lo, y Uint256) (quo, rem Uint256) {
 func (a LElem256) Mul(b interface{}) RElem {
 	Hi, Lo := mul256(Uint256(a), Uint256(b.(LElem256)))
 	if lessThan256(Hi, Uint256(LElem256Mod)) {
-		_, r := div256(Hi, Lo, Uint256(LElem256Mod))
+		_, r := Div256(Hi, Lo, Uint256(LElem256Mod))
 		return LElem256(r)
 	}
 
-	_, r := div256(uint64To256(0), Hi, Uint256(LElem256Mod))
-	_, r = div256(r, Lo, Uint256(LElem256Mod))
+	_, r := Div256(uint64To256(0), Hi, Uint256(LElem256Mod))
+	_, r = Div256(r, Lo, Uint256(LElem256Mod))
 	return LElem256(r)
 }
 func uint64To256(x uint64) Uint256 {
@@ -224,8 +224,8 @@ func uint64To256(x uint64) Uint256 {
 }
 
 func (a LElem256) Add(b interface{}) RElem {
-	out, carry := add256(Uint256(a), Uint256(b.(LElem256)), 0)
-	_, rem := div256(uint64To256(carry), out, Uint256(LElem256Mod))
+	out, carry := Add256(Uint256(a), Uint256(b.(LElem256)), 0)
+	_, rem := Div256(uint64To256(carry), out, Uint256(LElem256Mod))
 	return LElem256(rem)
 }
 
@@ -237,7 +237,7 @@ func (a LElem256) Neg() RElem {
 	if equal128(a.Hi, Uint128{0, 0}) && equal128(a.Lo, Uint128{0, 0}) {
 		return a
 	}
-	out, _ := sub256(Uint256(LElem256Mod), Uint256(a), 0)
+	out, _ := Sub256(Uint256(LElem256Mod), Uint256(a), 0)
 	return LElem256(out)
 }
 
@@ -372,7 +372,7 @@ again:
 	if !lessThan256(Uint256(r), Uint256(LElem256RandBnd)) {
 		goto again
 	}
-	_, rem := div256(uint64To256(0), Uint256(r), Uint256(LElem256Mod))
+	_, rem := Div256(uint64To256(0), Uint256(r), Uint256(LElem256Mod))
 	return LElem256(rem)
 }
 
