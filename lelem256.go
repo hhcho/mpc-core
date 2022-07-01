@@ -362,7 +362,7 @@ func (a LElem256) Trunc(nBits int) RElem {
 	return LElem256{Uint128{0, 0}, Uint128{0, tmp}}
 }
 func (a LElem256) TypeID() uint8 {
-	return LElem128UniqueID
+	return LElem256UniqueID
 }
 
 func (a LElem256) Rand(prg *frand.RNG) RElem {
