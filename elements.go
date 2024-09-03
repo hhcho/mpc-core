@@ -808,9 +808,9 @@ func (a BElem) FromFloat64(n float64, fracBits int) RElem {
 }
 func (a LElem2NBigInt) FromFloat64(n float64, fracBits int) RElem {
 	if n < 0 {
-		return LElem2NBigInt{LElem2NBigIntZero.FromFloat64(-n, fracBits).(LElem2NBigInt).ToBigInt()}.Neg()
+		return LElem2NBigInt{LElem128Zero.FromFloat64(-n, fracBits).(LElem128).ToBigInt()}.Neg()
 	} else {
-		return LElem2NBigInt{LElem2NBigIntZero.FromFloat64(n, fracBits).(LElem2NBigInt).ToBigInt()}
+		return LElem2NBigInt{LElem128Zero.FromFloat64(n, fracBits).(LElem128).ToBigInt()}
 	}
 }
 func (a LElem256) FromFloat64(n float64, fracBits int) RElem {
